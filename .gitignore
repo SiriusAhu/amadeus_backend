@@ -9,5 +9,9 @@ wheels/
 # Virtual environments
 .venv
 
-# sensitive information
+# Sensitive information
 .env
+
+# Temporary Files 
+*.tmp
+tmp*
