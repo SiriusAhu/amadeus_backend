@@ -1,12 +1,57 @@
 # unified_llm_api.py
 import json
+import os
 from pathlib import Path
 
 import requests
+import toml
 import yaml
+from dotenv import load_dotenv
+
+# 自动加载 .env
+load_dotenv()
+
+# ===================== #
+# 路径定义
+# ===================== #
+BASE_DIR = Path(__file__).resolve().parent
+CONFIG_DIR = BASE_DIR.parent / "config"
+PROVIDER_PATH = CONFIG_DIR / "llm_provider.toml"
+PROMPT_PATH = CONFIG_DIR / "prompt_amadeus.yaml"
 
 
-def load_prompt_yaml(path="prompt_amadeus.yaml"):
+# ===================== #
+# 读取 TOML 配置
+# ===================== #
+def load_provider_config(provider_name="ollama"):
+    """
+    从 ../config/llm_provider.toml 加载 provider 配置
+    """
+    if not PROVIDER_PATH.exists():
+        raise FileNotFoundError(f"❌ 未找到配置文件: {PROVIDER_PATH}")
+    config = toml.load(PROVIDER_PATH)
+
+    if provider_name not in config:
+        raise KeyError(f"⚠️ 配置文件中不存在 provider: {provider_name}")
+
+    provider = config[provider_name]
+    base_url = provider.get("base_url")
+    model = provider.get("model")
+    api_key_name = provider.get("api_key_name", "")
+    api_key = os.getenv(api_key_name) if api_key_name else None
+
+    return {
+        "provider": provider_name,
+        "base_url": base_url,
+        "model": model,
+        "api_key": api_key,
+    }
+
+
+# ===================== #
+# 读取 YAML 提示词
+# ===================== #
+def load_prompt_yaml(path=PROMPT_PATH):
     """
     读取 YAML 提示词文件，返回完整的 system_prompt 字符串。
     """
@@ -33,37 +78,51 @@ def load_prompt_yaml(path="prompt_amadeus.yaml"):
     return system_prompt
 
 
+# ===================== #
+# 通用 LLM 请求
+# ===================== #
 def call_llm_api(
-    url: str,
-    model: str,
-    messages: list[dict],
-    api_key: str | None = None,
+    text: str,
+    provider_name: str = "ollama",
     extra: dict | None = None,
     timeout: int = 120,
 ):
     """
     通用大模型调用函数。
-    支持 Ollama / DeepSeek / OpenAI 等标准接口。
-    Ollama 特殊处理：返回 NDJSON 流式数据。
+    自动从 llm_provider.toml 和 .env 中加载配置。
+    自动加载 YAML 提示词。
+    支持 Ollama / DeepSeek / OpenAI / ZhipuAI。
     """
+    config = load_provider_config(provider_name)
+    url = config["base_url"]
+    model = config["model"]
+    api_key = config["api_key"]
+
+    system_prompt = load_prompt_yaml()
+
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
 
-    payload = {"model": model, "messages": messages}
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": text},
+        ],
+    }
     if extra:
         payload.update(extra)
 
-    # 🔹 流式读取（Ollama 的返回是一行一行 JSON）
     response = requests.post(
         url, headers=headers, json=payload, timeout=timeout, stream=True
     )
 
-    # 判断是不是 Ollama 的流式输出
+    # Ollama: 流式 NDJSON
     if "localhost" in url or "127.0.0.1" in url:
         return _parse_ollama_stream(response)
 
-    # 其他厂商标准 JSON
+    # 标准 JSON（OpenAI / DeepSeek / ZhipuAI）
     data = response.json()
     if "choices" in data:
         return data["choices"][0]["message"]["content"]
@@ -71,8 +130,7 @@ def call_llm_api(
         return data["message"]["content"]
     elif "output" in data:
         return data["output"]
-    else:
-        return json.dumps(data, ensure_ascii=False)
+    return json.dumps(data, ensure_ascii=False)
 
 
 def _parse_ollama_stream(response):

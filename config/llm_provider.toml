@@ -1,0 +1,24 @@
+# === llm ===
+[ollama]
+provider = "ollama"
+base_url = "http://localhost:11434/api/chat"
+model = "qwen2.5:3b"
+api_key_name = ""
+
+[deepseek]
+provider = "deepseek"
+base_url = "https://api.deepseek.com/chat/completions"
+model = "deepseek-chat"
+api_key_name = "DEEPSEEK_API_KEY"
+
+[openai]
+provider = "openai"
+base_url = "https://api.openai.com/v1/chat/completions"
+model = "gpt-4o-mini"
+api_key_name = "OPENAI_API_KEY"
+
+[zhipuai]
+provider = "zhipuai"
+base_url = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+model = "glm-4-flash"
+api_key_name = "ZHIPU_API_KEY"
