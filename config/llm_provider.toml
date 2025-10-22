@@ -11,11 +11,11 @@ base_url = "https://api.deepseek.com/chat/completions"
 model = "deepseek-chat"
 api_key_name = "DEEPSEEK_API_KEY"
 
-[openai]
-provider = "openai"
-base_url = "https://api.openai.com/v1/chat/completions"
-model = "gpt-4o-mini"
-api_key_name = "OPENAI_API_KEY"
+# [openai]
+# [provider = "openai"
+# base_url = "https://api.openai.com/v1/chat/completions"
+# model = "gpt-4o-mini"
+# api_key_name = "OPENAI_API_KEY"
 
 [zhipuai]
 provider = "zhipuai"
