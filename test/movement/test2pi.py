@@ -41,7 +41,7 @@ async def run_test_suite():
             print("\n--- 所有测试完成 ---")
 
     except Exception as e:
-        print(f"\n--- 连接失败或测试出错 ---")
+        print("\n--- 连接失败或测试出错 ---")
         print(f"错误: {e}")
         print("请确保树莓派上的 Docker 容器正在运行。")
 
